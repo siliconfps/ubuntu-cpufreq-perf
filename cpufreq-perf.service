@@ -1,0 +1,11 @@
+[Unit]
+Description=CPU Frequency Governor - Performance Permanente
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/cpufreq-perf.sh
+
+[Install]
+WantedBy=multi-user.target

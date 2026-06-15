@@ -1,26 +1,43 @@
 #!/bin/bash
+# ====================================================================
+# Ubuntu CPU Performance - Modo Performance Permanente via systemd
+# Uso:
+#   1. Extraia todos os arquivos para a mesma pasta
+#   2. Execute:  sudo ./set_performance.sh
+# ====================================================================
 
-# Verifica se o script está sendo executado como root
+set -e
+
 if [ "$EUID" -ne 0 ]; then
-  echo "Por favor, execute como root (use sudo)."
-  exit
+  echo "ERRO: Execute como root (sudo)."
+  exit 1
 fi
 
-# Verifica se o cpufrequtils está instalado
-if ! command -v cpufreq-set &> /dev/null; then
-    echo "cpufrequtils não encontrado. Instalando..."
-    apt update && apt install -y cpufrequtils
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Obtém o número de cores (lógicos)
-nproc=$(nproc)
+echo ">>> Instalando cpufreq-perf (modo performance permanente) <<<"
 
-echo "Configurando $nproc núcleos para o modo performance..."
+# 1. Copia o script worker (grava direto no sysfs, zero dependencias)
+cp "$SCRIPT_DIR/cpufreq-perf.sh" /usr/local/bin/cpufreq-perf.sh
+chmod +x /usr/local/bin/cpufreq-perf.sh
 
-# Aplica o modo performance a cada core
-for ((i=0; i<nproc; i++)); do
-    cpufreq-set -c $i -g performance
-done
+# 2. Copia a unidade systemd
+cp "$SCRIPT_DIR/cpufreq-perf.service" /etc/systemd/system/cpufreq-perf.service
 
-echo "Concluído! Verificando status atual:"
-cpufreq-info | grep "current CPU frequency" | head -n $nproc
+# 3. Recarrega, habilita no boot e inicia agora
+systemctl daemon-reload
+systemctl enable cpufreq-perf.service --now
+
+echo ""
+echo "============================================"
+echo "  SERVICO INSTALADO E EM EXECUCAO"
+echo "  O governor 'performance' sera aplicado"
+echo "  automaticamente a cada boot."
+echo "============================================"
+echo ""
+
+systemctl status cpufreq-perf.service --no-pager -l || true
+
+echo ""
+echo "Governors atuais:"
+cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null | sort -u || echo "(nao disponivel)"
