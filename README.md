@@ -14,12 +14,12 @@ persistente — mesmo após reboot — usando um serviço **systemd**.
 
 | Distro              | Pacote necessário       | Comando de instalação              |
 | ------------------- | ----------------------- | ---------------------------------- |
-| **Debian / Ubuntu** | `linux-cpupower`        | `sudo apt install linux-cpupower`  |
+| **Debian / Ubuntu** | `cpufrequtils`          | `sudo apt install cpufrequtils`    |
 | **Arch Linux**      | `cpupower`              | `sudo pacman -S cpupower`          |
-| **Fedora**          | `kernel-tools`          | `sudo dnf install kernel-tools`    |
-| **openSUSE**        | `cpupower`              | `sudo zypper install cpupower`     |
+| **Fedora**          | `cpufrequtils`          | `sudo dnf install cpufrequtils`    |
+| **openSUSE**        | `cpufrequtils`          | `sudo zypper install cpufrequtils` |
 
-> O comando `cpupower` precisa estar disponível no sistema.
+> O comando `cpufreq-set` precisa estar disponível no sistema.
 > O script avisa e mostra o pacote correto caso ele não seja encontrado.
 
 ## Instalação e uso
@@ -71,7 +71,7 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/cpupower frequency-set -g performance
+ExecStart=/usr/bin/cpufreq-set -g performance
 RemainAfterExit=yes
 
 [Install]
@@ -102,7 +102,7 @@ existir).
 cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 
 # Ver frequências disponíveis e governor suportados
-cpupower frequency-info
+cpufreq-info
 
 # Ver status do serviço
 systemctl status cpu-performance.service

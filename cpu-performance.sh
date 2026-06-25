@@ -8,7 +8,7 @@
 #   sudo ./cpu-performance.sh status   # mostra o governor atual de cada core
 #   sudo ./cpu-performance.sh remove   # remove o serviço e restaura ondemand/powersave
 #
-# Requer: cpupower (linux-cpupower / linux-tools-common)
+# Requer: cpufrequtils
 
 set -euo pipefail
 
@@ -28,23 +28,23 @@ require_root() {
   fi
 }
 
-require_cpupower() {
-  if ! command -v cpupower &>/dev/null; then
-    die "cpupower não encontrado. Instale com:\n" \
-        "  Debian/Ubuntu:  sudo apt install linux-cpupower\n" \
+require_cpufrequtils() {
+  if ! command -v cpufreq-set &>/dev/null; then
+    die "cpufrequtils não encontrado. Instale com:\n" \
+        "  Debian/Ubuntu:  sudo apt install cpufrequtils\n" \
         "  Arch:           sudo pacman -S cpupower\n" \
-        "  Fedora:         sudo dnf install kernel-tools\n" \
-        "  openSUSE:       sudo zypper install cpupower"
+        "  Fedora:         sudo dnf install cpufrequtils\n" \
+        "  openSUSE:       sudo zypper install cpufrequtils"
   fi
 }
 
 # --- comandos ------------------------------------------------------
 cmd_apply() {
   require_root
-  require_cpupower
+  require_cpufrequtils
 
   green "==> Aplicando governor 'performance' agora..."
-  cpupower frequency-set -g performance || die "Falha ao definir governor."
+  cpufreq-set -g performance || die "Falha ao definir governor."
 
   green "==> Criando serviço systemd ${SERVICE_NAME}..."
   cat > "$SERVICE_FILE" <<EOF
@@ -54,7 +54,7 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/cpupower frequency-set -g performance
+ExecStart=/usr/bin/cpufreq-set -g performance
 RemainAfterExit=yes
 
 [Install]
@@ -68,13 +68,13 @@ EOF
 }
 
 cmd_status() {
-  require_cpupower
+  require_cpufrequtils
   echo "Governor atual por core:"
-  cpupower frequency-info -p 2>/dev/null || true
+  cpufreq-info -p 2>/dev/null || true
   echo
-  if command -v cpupower &>/dev/null; then
+  if command -v cpufreq-info &>/dev/null; then
     local cur
-    cur=$(cpupower frequency-info --policy 2>/dev/null | head -1 || true)
+    cur=$(cpufreq-info -p 2>/dev/null | head -1 || true)
     echo "Política atual: ${cur:-desconhecida}"
   fi
   if systemctl is-enabled "${SERVICE_NAME}.service" &>/dev/null; then
@@ -91,11 +91,11 @@ cmd_remove() {
   rm -f "$SERVICE_FILE"
   systemctl daemon-reload
 
-  require_cpupower
+  require_cpufrequtils
   yellow "==> Voltando governor para ondemand (ou powersave)..."
-  cpupower frequency-set -g ondemand 2>/dev/null \
-    || cpupower frequency-set -g powersave 2>/dev/null \
-    || cpupower frequency-set -g schedutil 2>/dev/null \
+  cpufreq-set -g ondemand 2>/dev/null \
+    || cpufreq-set -g powersave 2>/dev/null \
+    || cpufreq-set -g schedutil 2>/dev/null \
     || true
 
   green "==> Serviço removido. Governor restaurado."
